@@ -23,7 +23,7 @@ services:
       POSTGRES_USER: postgres
       TZ: "America/New_York"
     volumes:
-      - "C:/Usdocker composeers/masou/Code/Database/paper-trading:/var/lib/postgresql/"
+      - "C:/Users/masou/Code/Database/paper-trading:/var/lib/postgresql/"
       - "C:/Users/masou/Code/Database/paper-trading/data:/var/lib/postgresql/data"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready"]
