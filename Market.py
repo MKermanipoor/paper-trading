@@ -8,6 +8,7 @@ import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
 from app.models import Account, Position, Order
+from app import app
 
 
 def get_candles(asset_symbol: str, interval: str) -> pd.DataFrame:
@@ -94,7 +95,7 @@ def create_order(account: Account, asset_symbol: str, position: Position, price_
 
     response = requests.post(bser_url, json=data, headers=headers)
     if response.status_code != 200:
-        print('the request got ' + str(response.status_code) + ' status code, with this data: ' + response.text)
+        app.logger.warning('the request got ' + str(response.status_code) + ' status code, with this data: ' + response.text)
         return None
 
     response_data = json.loads(response.text)
