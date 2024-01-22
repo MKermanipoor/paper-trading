@@ -19,7 +19,7 @@ def init_jobs():
     with app.app_context():
         valid_tests: list[models.TestInfo] = models.TestInfo.query.filter(and_(models.TestInfo.start_time <= now(),
                                                                                models.TestInfo.end_time >= now()))
-        from bot import Bot, add_test_jobs
+        from bot import add_test_jobs
         for t in valid_tests:
             add_test_jobs(t, scheduler)
             # b = Bot(t)
