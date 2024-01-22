@@ -25,6 +25,7 @@ create table assets(
 
 create table test_info(
     id serial primary key ,
+    name text not null,
     start_time timestamp not null default now(),
     end_time timestamp,
     account_id int not null,
