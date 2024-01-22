@@ -4,7 +4,7 @@ import requests
 
 
 def send_message(msg: str, chanel_id: int):
-    requests.post(f'https://api.telegram.org/bot{app.config['BOT_TOKEN']}/sendMessage',
+    requests.post(f'https://api.telegram.org/bot{app.config["BOT_TOKEN"]}/sendMessage',
                   {
                       "chat_id": chanel_id,
                       "text": msg

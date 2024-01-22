@@ -65,7 +65,7 @@ class Bot:
 
                 Order.query.session.add(order)
 
-                AssetBudget.query.update({AssetBudget.budget: budget.budget - order.shares * order.average_price})
+                AssetBudget.query.filter(AssetBudget.id == self.__budget_id).update({AssetBudget.budget: budget.budget - order.shares * order.average_price})
                 AssetBudget.query.session.commit()
 
                 send_buy_action_message(self.__test_info, self.__asset, order)
@@ -93,7 +93,8 @@ class Bot:
                 order.rule_id = self.__sell_rule.id
 
                 Order.query.session.add(order)
-                AssetBudget.query.update({AssetBudget.budget: order.shares * order.average_price})
+                
+                AssetBudget.query.filter(AssetBudget.id == self.__budget_id).update({AssetBudget.budget: AssetBudget.budget + order.shares * order.average_price})
                 Order.query.session.commit()
 
                 send_sell_action_message(self.__test_info, self.__asset, order)
