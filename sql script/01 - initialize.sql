@@ -28,7 +28,9 @@ create table test_info(
     start_time timestamp not null default now(),
     end_time timestamp,
     account_id int not null,
-    setting jsonb not null,
+    sell_interval jsonb not null,
+    buy_interval jsonb not null,
+    setting jsonb not null
 );
 
 create table assets_budget(
