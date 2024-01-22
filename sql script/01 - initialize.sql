@@ -27,7 +27,8 @@ create table test_info(
     id serial primary key ,
     start_time timestamp not null default now(),
     end_time timestamp,
-    account_id int not null
+    account_id int not null,
+    setting jsonb not null,
 );
 
 create table assets_budget(
