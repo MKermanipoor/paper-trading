@@ -5,6 +5,8 @@ create table orders(
     shares real not null,
     average_price real not null,
     action_time timestamp not null default now(),
+    filled_at timestamp not null default now(),
+    type transaction_type not null,
     alpaca_id uuid not null,
     rule_id int not null
 );
