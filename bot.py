@@ -61,7 +61,9 @@ class Bot:
         order_response = Market.get_order_detail(self.__account, self.__waiting_order_alpaca_id)
 
         if not order_response['filled_at']:
+            self.__retry_counter += 1
             if self.__retry_counter >= 10:
+                Market.cancel_order(self.__account, self.__waiting_order_alpaca_id)
                 scheduler.remove_job(self.__get_waiting_job_id())
             return
 
