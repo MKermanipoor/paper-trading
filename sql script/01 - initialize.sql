@@ -2,10 +2,10 @@ CREATE TYPE transaction_type AS ENUM ('buy', 'sell');
 
 create table orders(
     id serial not null primary key ,
-    shares real not null,
-    average_price real not null,
+    shares float8,
+    average_price real,
     action_time timestamp not null default now(),
-    filled_at timestamp not null default now(),
+    filled_at timestamp,
     type transaction_type not null,
     alpaca_id uuid not null,
     rule_id int not null

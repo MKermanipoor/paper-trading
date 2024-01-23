@@ -6,7 +6,6 @@ import pandas as pd
 import Market
 import signal_util
 from datetime import datetime
-from tzlocal import get_localzone
 from telegram import send_buy_action_message, send_sell_action_message
 
 WAIT_STATE = 'wait'
@@ -34,12 +33,53 @@ class Bot:
             .first()
 
         self.__state = HOLD_STATE
-        if result is None or result.rule_id == self.__sell_rule.id:
+        if result is None:
+            self.__state = WAIT_STATE
+
+        elif not result.filled_at:
+            self.__register_the_monitoring_order_job(result.alpaca_id)
+
+        elif result.type == Position.buy:
+            self.__state = HOLD_STATE
+        else:
             self.__state = WAIT_STATE
 
         self.__budget_id = (AssetBudget.query.filter(and_(AssetBudget.asset_id == asset.id,
                                                         AssetBudget.test_id == test_info.id))
                           .first()).id
+
+    def __register_the_monitoring_order_job(self, order_alpaca_id: str):
+        self.__waiting_order_alpaca_id = order_alpaca_id
+        self.__retry_counter = 0
+        self.__state = FREEZE_STATE
+        scheduler.add_job(self.__get_waiting_job_id(), self.wait_for_order_to_fulfill, trigger='interval', seconds=2)
+
+    def __get_waiting_job_id(self):
+        return f'waiting order job {self.__waiting_order_alpaca_id}'
+
+    def wait_for_order_to_fulfill(self):
+        order_response = Market.get_order_detail(self.__account, self.__waiting_order_alpaca_id)
+
+        if not order_response['filled_at']:
+            if self.__retry_counter >= 10:
+                scheduler.remove_job(self.__get_waiting_job_id())
+            return
+
+        order = Market.cast_to_order(order_response)
+        with app.app_context():
+            Order.query.filter(Order.alpaca_id == self.__waiting_order_alpaca_id) \
+                .update({Order.shares: order.shares,
+                         Order.average_price: order.average_price,
+                         Order.filled_at: order.filled_at})
+            Order.query.session.commit()
+
+        scheduler.remove_job(self.__get_waiting_job_id())
+
+        if order.type == Position.buy:
+            self.__post_buy(order.to_DTO())
+        else:
+            self.__post_sell(order.to_DTO())
+
 
     def do_buy(self):
         if self.__state == HOLD_STATE or self.__state == FREEZE_STATE:
@@ -62,17 +102,22 @@ class Bot:
                     return
 
                 order.rule_id = self.__buy_rule.id
-
                 Order.query.session.add(order)
-
-                AssetBudget.query.filter(AssetBudget.id == self.__budget_id).update({AssetBudget.budget: budget.budget - order.shares * order.average_price})
-                AssetBudget.query.session.commit()
-
-                send_buy_action_message(self.__test_info, self.__asset, order)
+                Order.query.session.commit()
+                self.__register_the_monitoring_order_job(order.alpaca_id)
 
             app.logger.info(f'test {self.__test_info.name} asset {self.__asset.symbol}:\tbuy')
-            self.__state = HOLD_STATE
 
+    def __post_buy(self, order: Order.OrderDTO):
+        with app.app_context():
+            AssetBudget.query.filter(AssetBudget.id == self.__budget_id).update(
+                {AssetBudget.budget: AssetBudget.budget - order.shares * order.average_price})
+            AssetBudget.query.session.commit()
+
+        send_buy_action_message(self.__test_info, self.__asset, order)
+
+        app.logger.info(f'test {self.__test_info.name} asset {self.__asset.symbol}:\tbuy fulfilled ')
+        self.__state = HOLD_STATE
 
     def do_sell(self):
         if self.__state == WAIT_STATE or self.__state == FREEZE_STATE:
@@ -84,23 +129,27 @@ class Bot:
         sell_signal = signal_util.get_majority_signal(candles, self.__sell_rule.setting['signals'])
         buy_signal = signal_util.get_majority_signal(candles, self.__buy_rule.setting['signals'])
         if sell_signal.iloc[-1] and not buy_signal.iloc[-1]:
-            self.__state = FREEZE_STATE
             app.logger.debug(f'test {self.__test_info.name} asset {self.__asset.symbol}: start selling')
             with app.app_context():
                 last_order: Order = Order.query.filter(Order.rule_id == self.__buy_rule.id).order_by(Order.action_time.desc()).first()
                 order = Market.create_order(self.__account, self.__asset.symbol, Position.sell, number_of_share=last_order.shares)
-
                 order.rule_id = self.__sell_rule.id
-
                 Order.query.session.add(order)
-                
-                AssetBudget.query.filter(AssetBudget.id == self.__budget_id).update({AssetBudget.budget: AssetBudget.budget + order.shares * order.average_price})
                 Order.query.session.commit()
+                self.__register_the_monitoring_order_job(order.alpaca_id)
 
-                send_sell_action_message(self.__test_info, self.__asset, order)
-
-            self.__state = WAIT_STATE
             app.logger.info(f'test {self.__test_info.name} asset {self.__asset.symbol}:\tsell')
+
+    def __post_sell(self, order: Order.OrderDTO):
+        with app.app_context():
+            AssetBudget.query.filter(AssetBudget.id == self.__budget_id).update(
+                {AssetBudget.budget: AssetBudget.budget + order.shares * order.average_price})
+            AssetBudget.query.session.commit()
+
+        send_sell_action_message(self.__test_info, self.__asset, order)
+
+        app.logger.info(f'test {self.__test_info.name} asset {self.__asset.symbol}:\tsell fulfilled')
+        self.__state = WAIT_STATE
 
 
 class BotGroup:

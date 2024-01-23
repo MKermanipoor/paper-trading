@@ -124,6 +124,23 @@ class Order(db.Model):
     action_time = Column(DateTime, default=datetime.utcnow)
     filled_at = Column(DateTime)
 
+    class OrderDTO:
+        def __init__(self, identifier: int, shares: float, average_price: float,
+                     alpaca_id: str, rule_id: int, action_time, filled_at):
+            self.id = identifier
+
+            self.shares = shares
+            self.average_price = average_price
+            self.type = type
+            self.alpaca_id = alpaca_id
+
+            self.rule_id = rule_id
+            self.action_time = action_time
+            self.filled_at = filled_at
+
+    def to_DTO(self):
+        return Order.OrderDTO(self.id, self.shares, self.average_price, self.alpaca_id, self.rule_id, self.action_time, self.filled_at)
+
 
 class AssetBudget(db.Model):
     __tablename__ = 'assets_budget'

@@ -14,7 +14,7 @@ app.config.from_object('config')
 # app.logger.addHandler(handler)
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
-logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
+# logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 logging.getLogger('apscheduler.scheduler').setLevel(logging.DEBUG if app.config['DEBUG'] else logging.INFO)
 logging.getLogger('peewee').setLevel(logging.DEBUG if app.config['DEBUG'] else logging.INFO)
 logging.getLogger('yfinance').setLevel(logging.DEBUG if app.config['DEBUG'] else logging.INFO)

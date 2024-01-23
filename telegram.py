@@ -14,7 +14,7 @@ def send_message(msg: str, chanel_id: int):
 
 def get_common_message(test_info: TestInfo.TestInfoDTO,
                        asset: Asset.AssetDTO,
-                       order: Order,
+                       order: Order.OrderDTO,
                        position: Position) -> str:
     return (f'{"🛒 BUY" if position == Position.buy else "💰 SELL"}' +
             f'\nℹ️ Test: #Test_{test_info.id} {test_info.name}\n' +
@@ -26,14 +26,14 @@ def get_common_message(test_info: TestInfo.TestInfoDTO,
 
 def send_buy_action_message(test_info: TestInfo.TestInfoDTO,
                             asset: Asset.AssetDTO,
-                            order: Order):
+                            order: Order.OrderDTO):
     send_message(get_common_message(test_info, asset, order, Position.buy)
                  , test_info.setting[TestInfo.CHANNEL_ID_SETTING_KEY])
 
 
 def send_sell_action_message(test_info: TestInfo.TestInfoDTO,
                              asset: Asset.AssetDTO,
-                             order: Order):
+                             order: Order.OrderDTO):
     send_message(get_common_message(test_info, asset, order, Position.sell)
                  , test_info.setting[TestInfo.CHANNEL_ID_SETTING_KEY])
 

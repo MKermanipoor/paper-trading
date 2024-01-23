@@ -29,18 +29,17 @@ def __get_authorize_header(account: Account) -> dict:
 
 
 def __cast_str_to_time(time_str:str) -> datetime:
+    if time_str is None:
+        return None
+
     return datetime.strptime(time_str[:26], '%Y-%m-%dT%H:%M:%S.%f')\
         .replace(tzinfo=pytz.utc) \
         .astimezone(get_localzone())
 
-    # return datetime.strptime(time_str[:26], '%Y-%m-%dT%H:%M:%S.%f')\
-    #     .replace(tzinfo=pytz.utc)
-
-
-def __cast_to_order(order_json: dict) -> Order:
+def cast_to_order(order_json: dict) -> Order:
     order = Order()
-    order.shares = float(order_json['filled_qty'])
-    order.average_price = float(order_json['filled_avg_price'])
+    order.shares = float(order_json['filled_qty']) if order_json['filled_qty'] else None
+    order.average_price = float(order_json['filled_avg_price']) if order_json['filled_avg_price'] else None
     order.type = Position.buy if order_json['side'] == 'buy' else Position.sell
     order.alpaca_id = order_json['id']
 
@@ -57,7 +56,7 @@ def cancel_order(account: Account, order_id: str):
 
 
 def get_order_detail(account: Account, order_id: str):
-    bser_url = "https://paper-api.alpaca.markets/v2/orders/" + order_id
+    bser_url = "https://paper-api.alpaca.markets/v2/orders/" + str(order_id)
     headers = __get_authorize_header(account)
 
     response = requests.get(bser_url, headers=headers)
@@ -96,17 +95,7 @@ def create_order(account: Account, asset_symbol: str, position: Position, price_
     response = requests.post(bser_url, json=data, headers=headers)
     if response.status_code != 200:
         app.logger.warning('the request got ' + str(response.status_code) + ' status code, with this data: ' + response.text)
-        return None
+        raise Exception('the request got ' + str(response.status_code) + ' status code, with this data: ' + response.text)
 
     response_data = json.loads(response.text)
-    order_id = response_data['id']
-    retry_count = 0
-    while not response_data['filled_at']:
-        sleep(1)
-        response_data = get_order_detail(account, order_id)
-        retry_count += 1
-        if retry_count >= 10:
-            cancel_order(account, order_id)
-            return None
-
-    return __cast_to_order(response_data)
+    return cast_to_order(response_data)
