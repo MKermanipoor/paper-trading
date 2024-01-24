@@ -50,7 +50,7 @@ def cast_to_order(order_json: dict) -> Order:
 
 
 def cancel_order(account: Account, order_id: str):
-    bser_url = "https://paper-api.alpaca.markets/v2/orders/" + order_id
+    bser_url = "https://paper-api.alpaca.markets/v2/orders/" + str(order_id)
     headers = __get_authorize_header(account)
     requests.delete(bser_url, headers=headers)
 
