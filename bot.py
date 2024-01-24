@@ -65,6 +65,7 @@ class Bot:
             if self.__retry_counter >= 10:
                 with app.app_context():
                     order = Order.query.filter(Order.alpaca_id == self.__waiting_order_alpaca_id).first()
+                    self.__state = WAIT_STATE if order.type == Position.buy else HOLD_STATE
                     Order.query.session.delete(order)
                     Order.query.session.commit()
 
