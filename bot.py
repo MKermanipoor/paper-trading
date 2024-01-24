@@ -63,6 +63,11 @@ class Bot:
         if not order_response['filled_at']:
             self.__retry_counter += 1
             if self.__retry_counter >= 10:
+                with app.app_context():
+                    order = Order.query.filter(Order.alpaca_id == self.__waiting_order_alpaca_id).first()
+                    Order.query.session.delete(order)
+                    Order.query.session.commit()
+
                 Market.cancel_order(self.__account, self.__waiting_order_alpaca_id)
                 scheduler.remove_job(self.__get_waiting_job_id())
             return
