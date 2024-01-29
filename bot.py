@@ -231,7 +231,7 @@ class BotGroup:
         performances = Market.get_performance(self.__account, 5)
         message = 'Strategy report:\n'
         for p in performances:
-            message += f'{p.get_date()}:\t{"🟩" if p.get_profit_loss() > 0 else "🟥"}\n'
+            message += f'{p.get_date()}:\t{"🟩" if p.get_profit_loss() > 0 else "🟥"} p.get_profit_loss()\n'
         message += '#report'
 
         send_message(message, self.__test_info.setting[TestInfo.CHANNEL_ID_SETTING_KEY])
