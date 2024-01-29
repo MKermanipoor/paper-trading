@@ -20,7 +20,7 @@ def get_candles(asset_symbol: str, interval: str) -> pd.DataFrame:
     return stock.history(interval=interval, start=start_time)
 
 
-def __get_authorize_header(account: Account) -> dict:
+def __get_authorize_header(account: Account.AccountDTO) -> dict:
     return {
         'APCA-API-KEY-ID': account.api_key,
         'APCA-API-SECRET-KEY': account.secret_key,
@@ -49,13 +49,13 @@ def cast_to_order(order_json: dict) -> Order:
     return order
 
 
-def cancel_order(account: Account, order_id: str):
+def cancel_order(account: Account.AccountDTO, order_id: str):
     bser_url = "https://paper-api.alpaca.markets/v2/orders/" + str(order_id)
     headers = __get_authorize_header(account)
     requests.delete(bser_url, headers=headers)
 
 
-def get_order_detail(account: Account, order_id: str):
+def get_order_detail(account: Account.AccountDTO, order_id: str):
     bser_url = "https://paper-api.alpaca.markets/v2/orders/" + str(order_id)
     headers = __get_authorize_header(account)
 
@@ -66,7 +66,7 @@ def get_order_detail(account: Account, order_id: str):
     return json.loads(response.text)
 
 
-def create_order(account: Account, asset_symbol: str, position: Position, price_amount=None,
+def create_order(account: Account.AccountDTO, asset_symbol: str, position: Position, price_amount=None,
                  number_of_share=None) -> Order:
     if price_amount is None and number_of_share is None:
         raise 'the amount should be buy is unknown'
@@ -99,3 +99,46 @@ def create_order(account: Account, asset_symbol: str, position: Position, price_
 
     response_data = json.loads(response.text)
     return cast_to_order(response_data)
+
+
+class AccountPerformanceItem:
+    def __init__(self, time: int, profit_loss: int):
+        self.__date = datetime.fromtimestamp(time).date()
+        self.__profit_loss = profit_loss
+
+    def get_date(self):
+        return self.__date
+
+    def get_profit_loss(self):
+        return self.__profit_loss
+
+
+
+def get_performance(account: Account.AccountDTO, number_of_day: int = 5):
+    base_url = "https://paper-api.alpaca.markets/v2/account/portfolio/history"
+    param = {
+        'period': f'{number_of_day}D',
+        'timeframe': '1D',
+        'intraday_reporting': 'market_hours',
+        'pnl_reset': 'per_day'
+    }
+    headers = __get_authorize_header(account)
+    response = requests.get(base_url, param, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f'unable to get the performance of the account and got {response.status_code}: {response.text}')
+
+    response = json.loads(response.text)
+    performance_items = []
+    for i in range(len(response['timestamp'])):
+        performance_items.append(AccountPerformanceItem(response['timestamp'][i], response['profit_loss'][i]))
+
+    return performance_items
+
+
+if __name__ == '__main__':
+    a = Account()
+    a.secret_key = '6QOgIWFfp9ut6tScmVD3SVWeqkeuU1J10oOxKS2F'
+    a.api_key = 'PKUTWRTNWLSMZHVEPJR9'
+    for item in get_performance(a, 10):
+        print(item)

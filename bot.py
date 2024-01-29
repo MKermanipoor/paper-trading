@@ -1,4 +1,5 @@
 from sqlalchemy import and_
+
 from app.models import TestInfo, Rule, Position, Order, Asset, AssetBudget
 from app import app, scheduler
 from flask_apscheduler import APScheduler
@@ -6,7 +7,7 @@ import pandas as pd
 import Market
 import signal_util
 from datetime import datetime
-from telegram import send_buy_action_message, send_sell_action_message
+from telegram import send_buy_action_message, send_sell_action_message, send_message
 
 WAIT_STATE = 'wait'
 FREEZE_STATE = 'freeze_after_buy'
@@ -163,6 +164,7 @@ class Bot:
 class BotGroup:
     def __init__(self, test_info: TestInfo):
         self.__test_info = test_info.get_DTO()
+        self.__account = test_info.account.get_DTO()
         rules = test_info.rules
         rules_df = cast_database_result_to_df(rules)
 
@@ -197,6 +199,10 @@ class BotGroup:
         __['max_instances'] = 5
         scheduler.add_job(self.get_position_schedule_name(Position.sell), self._do_sell_job, **__)
 
+        scheduler.add_job(self.__test_info.name + ' reporter', self.__report_performance, trigger='cron',
+                          hour=16,
+                          day_of_week="mon-fri")
+
     def _do_buy_job(self):
         if not self._is_valid_time():
             return
@@ -220,6 +226,14 @@ class BotGroup:
                 app.logger.warning(f'{self.__test_info} is stopped due to finished test time')
             return False
         return True
+
+    def __report_performance(self):
+        performances = Market.get_performance(self.__account, 5)
+        message = ''
+        for p in performances:
+            message += f'{p.get_date()}:\t{"🟩" if p.get_profit_loss() > 0 else "🟥"}\n'
+
+        send_message(message, self.__test_info.setting[TestInfo.CHANNEL_ID_SETTING_KEY])
 
 def add_test_jobs(test_info: TestInfo, scheduler: APScheduler):
     bot_group = BotGroup(test_info)
