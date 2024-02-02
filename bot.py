@@ -53,7 +53,7 @@ class Bot:
         self.__waiting_order_alpaca_id = order_alpaca_id
         self.__retry_counter = 0
         self.__state = FREEZE_STATE
-        scheduler.add_job(self.__get_waiting_job_id(), self.wait_for_order_to_fulfill, trigger='interval', seconds=2)
+        scheduler.add_job(self.__get_waiting_job_id(), self.wait_for_order_to_fulfill, trigger='interval', seconds=5)
 
     def __get_waiting_job_id(self):
         return f'waiting order job {self.__waiting_order_alpaca_id}'
@@ -61,9 +61,9 @@ class Bot:
     def wait_for_order_to_fulfill(self):
         order_response = Market.get_order_detail(self.__account, self.__waiting_order_alpaca_id)
 
-        if not order_response['filled_at']:
+        if not order_response['status'] == 'filled':
             self.__retry_counter += 1
-            if self.__retry_counter >= 10:
+            if self.__retry_counter >= 20:
                 with app.app_context():
                     order = Order.query.filter(Order.alpaca_id == self.__waiting_order_alpaca_id).first()
                     self.__state = WAIT_STATE if order.type == Position.buy else HOLD_STATE
